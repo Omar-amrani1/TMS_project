@@ -1,67 +1,92 @@
-// src/api/services/orders.service.ts
 import { apiClient } from "../client";
 import { endpoints } from "../endpoints";
 import type {
   Order,
   CreateOrderRequest,
-  UpdateOrderStatusRequest,
   OrderStatus,
   OrderType,
   ApiResponse,
+  OrderNotification,
+  RateOrderRequest,
 } from "../../types/api.types";
 
+const toQuery = (params?: Record<string, string | undefined>) => {
+  const query = new URLSearchParams();
+  Object.entries(params || {}).forEach(([k, v]) => {
+    if (v) query.append(k, v);
+  });
+  const qs = query.toString();
+  return qs ? `?${qs}` : "";
+};
+
 export const ordersService = {
-  // Get all orders
   getOrders: async (params?: {
     userId?: string;
     status?: OrderStatus;
     type?: OrderType;
   }): Promise<Order[]> => {
-    const queryParams = new URLSearchParams();
-    if (params?.userId) queryParams.append("userId", params.userId);
-    if (params?.status) queryParams.append("status", params.status);
-    if (params?.type) queryParams.append("type", params.type);
-
     const response = await apiClient.get<ApiResponse<{ orders: Order[] }>>(
-      `${endpoints.orders.base}?${queryParams}`
+      `${endpoints.orders.base}${toQuery({
+        userId: params?.userId,
+        status: params?.status,
+        type: params?.type,
+      })}`,
     );
-    return (response.data as any).data.orders;
+    return response.data.data.orders;
   },
 
-  // Get order by ID
   getOrderById: async (id: string): Promise<Order> => {
     const response = await apiClient.get<ApiResponse<{ order: Order }>>(
-      endpoints.orders.byId(id)
+      endpoints.orders.byId(id),
     );
-    return (response.data as any).data.order;
+    return response.data.data.order;
   },
 
-  // Create order
   createOrder: async (data: CreateOrderRequest): Promise<Order> => {
     const response = await apiClient.post<ApiResponse<{ order: Order }>>(
       endpoints.orders.base,
-      data
+      data,
     );
-    return (response.data as any).data.order;
+    return response.data.data.order;
   },
 
-  // Update order status
   updateOrderStatus: async (
     id: string,
-    status: OrderStatus
+    status: OrderStatus,
   ): Promise<Order> => {
     const response = await apiClient.put<ApiResponse<{ order: Order }>>(
       endpoints.orders.updateStatus(id),
-      { status }
+      { status },
     );
-    return (response.data as any).data.order;
+    return response.data.data.order;
   },
 
-  // Cancel order
   cancelOrder: async (id: string): Promise<Order> => {
     const response = await apiClient.post<ApiResponse<{ order: Order }>>(
-      endpoints.orders.cancel(id)
+      endpoints.orders.cancel(id),
     );
-    return (response.data as any).data.order;
+    return response.data.data.order;
+  },
+
+  getMyNotifications: async (): Promise<OrderNotification[]> => {
+    const response = await apiClient.get<
+      ApiResponse<{ total: number; notifications: OrderNotification[] }>
+    >(endpoints.orders.notificationsMy);
+    return response.data.data.notifications;
+  },
+
+  acceptOrder: async (id: string): Promise<Order> => {
+    const response = await apiClient.post<ApiResponse<{ order: Order }>>(
+      endpoints.orders.accept(id),
+    );
+    return response.data.data.order;
+  },
+
+  rateOrder: async (id: string, payload: RateOrderRequest): Promise<Order> => {
+    const response = await apiClient.post<ApiResponse<{ order: Order }>>(
+      endpoints.orders.rate(id),
+      payload,
+    );
+    return response.data.data.order;
   },
 };

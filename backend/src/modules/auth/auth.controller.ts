@@ -49,6 +49,15 @@ export const getProfile = asyncHandler(
     sendSuccess(res, { user });
   }
 );
+
+export const updateProfile = asyncHandler(
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const userId = req.user!.id;
+    const result = await authService.updateProfile(userId, req.body);
+    sendSuccess(res, result, 'Profile updated successfully');
+  }
+);
+
 export const createUser = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const result = await authService.createUser(req.body);

@@ -14,15 +14,16 @@ import { ProductManagementPage } from "./pages/ProductManagementPage";
 import { StockManagementPage } from "./pages/StockManagementPage";
 import { TransportManagementPage } from "./pages/TransportManagementPage";
 import { LocationsManagementPage } from "./pages/LocationsManagementPage";
-import { UserManagementPage } from "./pages/UserManagementPage";
+import { UserManagementPage } from "./pages/UserManagementpage";
 import { ProtectedRoute } from "./components/layout/ProtectedRoute";
 import { useAuthStore } from "./store/authStore";
+import { ManagerAnalyticsPage } from "./pages/ManagerAnalyticsPage";
+
 import { useEffect } from "react";
 
 function App() {
   const { isAuthenticated } = useAuthStore();
 
-  // Add dark class to html element
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
@@ -37,12 +38,17 @@ function App() {
         element={
           isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
         }
-      />      <Route path="/profile" element={<ProfilePage />} />
+      />
 
-      {/* Public Order Routes */}
-      <Route path="/orders" element={<OrdersPage />} />
-      
-      {/* Protected Order Creation Route */}
+      {/* Protected standalone routes */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/orders/create"
         element={
@@ -51,10 +57,27 @@ function App() {
           </ProtectedRoute>
         }
       />
-      
-      <Route path="/orders/:orderId" element={<OrderDetailsPage />} />
+      <Route
+        path="/requests/new"
+        element={
+          <ProtectedRoute>
+            <OrderCreationPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/orders/:orderId"
+        element={
+          <ProtectedRoute>
+            <OrderDetailsPage />
+          </ProtectedRoute>
+        }
+      />
 
-      {/* Protected Routes with Sidebar (Dashboard) */}
+      {/* Public order listing (keep if intended) */}
+      <Route path="/orders" element={<OrdersPage />} />
+
+      {/* Protected Routes with Sidebar */}
       <Route
         element={
           <ProtectedRoute>
@@ -77,17 +100,12 @@ function App() {
           element={<ProductManagementPage />}
         />
         <Route path="/stock" element={<StockManagementPage />} />
-        
         <Route path="/transport" element={<TransportManagementPage />} />
         <Route path="/locations" element={<LocationsManagementPage />} />
-        <Route
-          path="/users"
-          element={<UserManagementPage />
-          }
-        />
+        <Route path="/users" element={<UserManagementPage />} />
+        <Route path="/analytics" element={<ManagerAnalyticsPage />} />
       </Route>
 
-      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

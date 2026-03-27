@@ -1,4 +1,3 @@
-// src/api/services/auth.service.ts
 import { apiClient } from "../client";
 import { endpoints } from "../endpoints";
 import type {
@@ -9,29 +8,27 @@ import type {
   ApiResponse,
 } from "../../types/api.types";
 
+type UpdateProfileRequest = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+};
+
 export const authService = {
   // Login
-  
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    try {
-      const response = await apiClient.post<ApiResponse<LoginResponse>>(
-        endpoints.auth.login,
-        credentials
-      );
-      // Access the ApiResponse wrapper and get the data
-      const loginResponse = response.data as ApiResponse<LoginResponse>;
-      const loginData = loginResponse.data as LoginResponse;
-      return loginData;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+    const response = await apiClient.post<ApiResponse<LoginResponse>>(
+      endpoints.auth.login,
+      credentials,
+    );
+    const loginResponse = response.data as ApiResponse<LoginResponse>;
+    return loginResponse.data as LoginResponse;
   },
 
   // Get current user profile
   getProfile: async (): Promise<User> => {
     const response = await apiClient.get<ApiResponse<{ user: User }>>(
-      endpoints.auth.profile
+      endpoints.auth.profile,
     );
     return (response.data as any).data.user;
   },
@@ -39,7 +36,16 @@ export const authService = {
   // Verify token
   verifyToken: async (): Promise<User> => {
     const response = await apiClient.get<ApiResponse<{ user: User }>>(
-      endpoints.auth.verifyToken
+      endpoints.auth.verifyToken,
+    );
+    return (response.data as any).data.user;
+  },
+
+  // Update profile
+  updateProfile: async (data: UpdateProfileRequest): Promise<User> => {
+    const response = await apiClient.put<ApiResponse<{ user: User }>>(
+      endpoints.auth.profile,
+      data,
     );
     return (response.data as any).data.user;
   },

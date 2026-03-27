@@ -5,6 +5,9 @@ import type { LoginRequest, ChangePasswordRequest } from "../types/api.types";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+const getErrorMessage = (error: any, fallback: string) =>
+  error?.response?.data?.message || error?.message || fallback;
+
 export const useAuth = () => {
   const { user, isAuthenticated, setAuth, clearAuth } = useAuthStore();
   const queryClient = useQueryClient();
@@ -19,7 +22,7 @@ export const useAuth = () => {
       navigate("/dashboard");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Login failed");
+      toast.error(getErrorMessage(error, "Login failed"));
     },
   });
 
@@ -28,7 +31,23 @@ export const useAuth = () => {
     queryKey: ["auth", "profile"],
     queryFn: authService.getProfile,
     enabled: isAuthenticated,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: (data: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+    }) => authService.updateProfile(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auth", "profile"] });
+      toast.success("Profile updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(getErrorMessage(error, "Failed to update profile"));
+    },
   });
 
   // Change password mutation
@@ -39,7 +58,7 @@ export const useAuth = () => {
       toast.success("Password changed successfully");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to change password");
+      toast.error(getErrorMessage(error, "Failed to change password"));
     },
   });
 
@@ -60,6 +79,9 @@ export const useAuth = () => {
     loginError: loginMutation.error,
     profile: profileQuery.data,
     isLoadingProfile: profileQuery.isLoading,
+    updateProfile: updateProfileMutation.mutate,
+    updateProfileAsync: updateProfileMutation.mutateAsync,
+    isUpdatingProfile: updateProfileMutation.isPending,
     changePassword: changePasswordMutation.mutate,
     isChangingPassword: changePasswordMutation.isPending,
     logout,

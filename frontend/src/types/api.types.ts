@@ -4,19 +4,25 @@ export const UserRole = {
   PRODUCTION_CLIENT: "PRODUCTION_CLIENT",
   DISTRIBUTOR: "DISTRIBUTOR",
   TRANSPORT_PROVIDER: "TRANSPORT_PROVIDER",
+  FINISHED_STOCK_MANAGER: "FINISHED_STOCK_MANAGER",
 } as const;
+
+export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
 export const ProductType = {
   RAW_MATERIAL: "RAW_MATERIAL",
   FINISHED_PRODUCT: "FINISHED_PRODUCT",
 } as const;
 
+export type ProductType = (typeof ProductType)[keyof typeof ProductType];
+
 export const OrderType = {
   RAW_MATERIAL_ORDER: "RAW_MATERIAL_ORDER",
   FINISHED_PRODUCT_ORDER: "FINISHED_PRODUCT_ORDER",
+  DELIVERY: "DELIVERY",
 } as const;
 
-export type OrderType = typeof OrderType[keyof typeof OrderType];
+export type OrderType = (typeof OrderType)[keyof typeof OrderType];
 
 export const OrderStatus = {
   PENDING: "PENDING",
@@ -27,7 +33,7 @@ export const OrderStatus = {
   CANCELLED: "CANCELLED",
 } as const;
 
-export type OrderStatus = typeof OrderStatus[keyof typeof OrderStatus];
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export const VehicleStatus = {
   AVAILABLE: "AVAILABLE",
@@ -36,7 +42,7 @@ export const VehicleStatus = {
   INACTIVE: "INACTIVE",
 } as const;
 
-export type VehicleStatus = typeof VehicleStatus[keyof typeof VehicleStatus];
+export type VehicleStatus = (typeof VehicleStatus)[keyof typeof VehicleStatus];
 
 export const TransportJobStatus = {
   SCHEDULED: "SCHEDULED",
@@ -45,7 +51,8 @@ export const TransportJobStatus = {
   CANCELLED: "CANCELLED",
 } as const;
 
-export type TransportJobStatus = typeof TransportJobStatus[keyof typeof TransportJobStatus];
+export type TransportJobStatus =
+  (typeof TransportJobStatus)[keyof typeof TransportJobStatus];
 
 export const ProductionBatchStatus = {
   PLANNED: "PLANNED",
@@ -54,7 +61,8 @@ export const ProductionBatchStatus = {
   CANCELLED: "CANCELLED",
 } as const;
 
-export type ProductionBatchStatus = typeof ProductionBatchStatus[keyof typeof ProductionBatchStatus];
+export type ProductionBatchStatus =
+  (typeof ProductionBatchStatus)[keyof typeof ProductionBatchStatus];
 
 export interface User {
   id: string;
@@ -84,7 +92,6 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
-
 export interface CreateUserRequest {
   email: string;
   password: string;
@@ -111,7 +118,6 @@ export interface UsersListResponse {
     pages: number;
   };
 }
-
 
 export interface Location {
   id: string;
@@ -155,6 +161,8 @@ export interface Product {
   sku: string;
   type: ProductType;
   unitWeight: number;
+  unitPrice?: number;
+  subtotal?: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -166,6 +174,7 @@ export interface CreateProductRequest {
   sku: string;
   type: ProductType;
   unitWeight: number;
+  unitPrice: number;
 }
 
 export interface RawMaterialStock {
@@ -223,6 +232,8 @@ export interface OrderItem {
   orderId: string;
   productId: string;
   quantity: number;
+  unitPrice?: number;
+  subtotal?: number;
   createdAt: string;
   product: Product;
 }
@@ -233,19 +244,36 @@ export interface Order {
   type: OrderType;
   status: OrderStatus;
   createdById: string;
+  confirmingUserId: string;
+  destinationUserId?: string | null;
+  ratedByUserId?: string | null;
   fromLocationId: string;
   toLocationId: string;
   transportTotal: number;
   distanceKm: number;
+  ratingOnTime?: boolean | null;
+  ratingDamageFree?: boolean | null;
+  ratedAt?: string | null;
   orderDate: string;
-  deliveryDate?: string;
+  deliveryDate?: string | null;
   createdAt: string;
   updatedAt: string;
   createdBy: User;
+  confirmingUser?: User;
+  destinationUser?: User | null;
+  ratedByUser?: User | null;
   fromLocation: Location;
   toLocation: Location;
   items: OrderItem[];
   transportJob?: TransportJob;
+  transportProvider?: {
+    id: string;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    companyName?: string | null;
+    userId?: string;
+  } | null;
 }
 
 export interface CreateOrderRequest {
@@ -253,11 +281,33 @@ export interface CreateOrderRequest {
   fromLocationId: string;
   toLocationId?: string;
   confirmingUserId: string;
+  destinationUserId?: string;
   transportProviderId: string;
   items: {
     productId: string;
     quantity: number;
   }[];
+}
+export interface RateOrderRequest {
+  onTime: boolean;
+  damageFree: boolean;
+}
+export interface OrderNotification {
+  id: string;
+  orderNumber: string;
+  type: OrderType;
+  status: OrderStatus;
+  createdAt: string;
+  createdBy: Pick<User, "id" | "firstName" | "lastName" | "email" | "role">;
+  fromLocation: Location;
+  toLocation: Location;
+  items: OrderItem[];
+  transportProvider?: {
+    id: string;
+    name: string;
+    userId: string;
+  } | null;
+  message: string;
 }
 
 export interface UpdateOrderStatusRequest {

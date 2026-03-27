@@ -1,5 +1,4 @@
-// src/pages/LocationsManagementPage.tsx
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { locationsService } from "../api/services/locations.service";
 import {
@@ -15,9 +14,33 @@ import {
   Warehouse,
   Store,
   XCircle,
+  Loader2,
 } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import type { Location, CreateLocationRequest } from "../types/api.types";
+
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
+import type { LatLngTuple } from "leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+// Leaflet marker fix for Vite
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
 
 const LOCATION_TYPES = [
   { value: "RAW_WAREHOUSE", label: "Raw Warehouse", icon: Warehouse },
@@ -26,18 +49,112 @@ const LOCATION_TYPES = [
   { value: "DISTRIBUTION_CENTER", label: "Distribution Center", icon: Store },
 ];
 
+const DEFAULT_CENTER: LatLngTuple = [33.5731, -7.5898];
+
+const toNumber = (v: unknown, fallback = 0) => {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const reverseGeocode = async (
+  lat: number,
+  lng: number,
+): Promise<string | null> => {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(
+    lat,
+  )}&lon=${encodeURIComponent(lng)}`;
+
+  const res = await fetch(url, {
+    headers: { Accept: "application/json" },
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data?.display_name || null;
+};
+
+const RecenterMap = ({ center }: { center: LatLngTuple }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(center);
+  }, [center, map]);
+
+  return null;
+};
+
+const PickOnMap = ({
+  onPick,
+}: {
+  onPick: (lat: number, lng: number) => void;
+}) => {
+  useMapEvents({
+    click(e) {
+      onPick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+
+  return null;
+};
+
+const AllLocationsMap = ({ locations }: { locations: Location[] }) => {
+  const valid = locations.filter(
+    (l) =>
+      Number.isFinite(toNumber(l.latitude, NaN)) &&
+      Number.isFinite(toNumber(l.longitude, NaN)),
+  );
+
+  const center: LatLngTuple = valid.length
+    ? [toNumber(valid[0].latitude), toNumber(valid[0].longitude)]
+    : DEFAULT_CENTER;
+
+  return (
+    <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-4">
+      <h3 className="text-white font-semibold mb-3">Locations Map</h3>
+      <MapContainer
+        center={center}
+        zoom={7}
+        scrollWheelZoom
+        style={{ height: 320, width: "100%", borderRadius: "0.75rem" }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        {valid.map((location) => (
+          <Marker
+            key={location.id}
+            position={[
+              toNumber(location.latitude),
+              toNumber(location.longitude),
+            ]}
+          >
+            <Popup>
+              <div className="min-w-[160px]">
+                <p className="font-semibold">{location.name}</p>
+                <p className="text-xs">{location.address}</p>
+                <p className="text-xs mt-1">{location.locationType}</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+    </div>
+  );
+};
+
 export const LocationsManagementPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | "ALL">("ALL");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
-    null
+    null,
   );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
 
-  const { data: locations, isLoading } = useQuery({
+  const { data: locations = [], isLoading } = useQuery({
     queryKey: ["locations"],
     queryFn: locationsService.getLocations,
   });
@@ -89,20 +206,18 @@ export const LocationsManagementPage = () => {
     label: type.label,
     value: locations?.filter((l) => l.locationType === type.value).length || 0,
     icon: type.icon,
-    color: "blue",
   }));
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Location Management</h1>
@@ -121,7 +236,6 @@ export const LocationsManagementPage = () => {
         )}
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {stats.map((stat) => (
           <div
@@ -137,7 +251,8 @@ export const LocationsManagementPage = () => {
         ))}
       </div>
 
-      {/* Search and Filters */}
+      <AllLocationsMap locations={filteredLocations} />
+
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -167,7 +282,6 @@ export const LocationsManagementPage = () => {
         </div>
       </div>
 
-      {/* Locations Grid */}
       {filteredLocations.length === 0 ? (
         <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-12 text-center">
           <MapPin className="w-12 h-12 text-gray-600 mx-auto mb-4" />
@@ -184,7 +298,7 @@ export const LocationsManagementPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredLocations.map((location) => {
             const locationType = LOCATION_TYPES.find(
-              (t) => t.value === location.locationType
+              (t) => t.value === location.locationType,
             );
             const Icon = locationType?.icon || MapPin;
 
@@ -230,8 +344,8 @@ export const LocationsManagementPage = () => {
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <Navigation className="w-4 h-4" />
                     <span>
-                      {location.latitude.toFixed(4)},{" "}
-                      {location.longitude.toFixed(4)}
+                      {toNumber(location.latitude).toFixed(4)},{" "}
+                      {toNumber(location.longitude).toFixed(4)}
                     </span>
                   </div>
                 </div>
@@ -247,7 +361,6 @@ export const LocationsManagementPage = () => {
         </div>
       )}
 
-      {/* Add Location Modal */}
       {isAddModalOpen && (
         <LocationFormModal
           onClose={() => setIsAddModalOpen(false)}
@@ -256,7 +369,6 @@ export const LocationsManagementPage = () => {
         />
       )}
 
-      {/* Edit Location Modal */}
       {selectedLocation && !isDeleteModalOpen && (
         <LocationFormModal
           location={selectedLocation}
@@ -268,7 +380,6 @@ export const LocationsManagementPage = () => {
         />
       )}
 
-      {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && selectedLocation && (
         <DeleteConfirmModal
           location={selectedLocation}
@@ -284,7 +395,6 @@ export const LocationsManagementPage = () => {
   );
 };
 
-// Location Form Modal
 interface LocationFormModalProps {
   location?: Location;
   onClose: () => void;
@@ -301,10 +411,53 @@ const LocationFormModal = ({
   const [formData, setFormData] = useState<CreateLocationRequest>({
     name: location?.name || "",
     address: location?.address || "",
-    latitude: location?.latitude || 0,
-    longitude: location?.longitude || 0,
+    latitude: toNumber(location?.latitude, DEFAULT_CENTER[0]),
+    longitude: toNumber(location?.longitude, DEFAULT_CENTER[1]),
     locationType: location?.locationType || "",
   });
+
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
+
+  const markerPosition = useMemo<LatLngTuple>(
+    () => [toNumber(formData.latitude), toNumber(formData.longitude)],
+    [formData.latitude, formData.longitude],
+  );
+
+  const resolveAndFillAddress = async (lat: number, lng: number) => {
+    const reqId = ++requestIdRef.current;
+    setIsResolvingAddress(true);
+    setGeoError(null);
+
+    try {
+      const addr = await reverseGeocode(lat, lng);
+      if (reqId !== requestIdRef.current) return;
+      if (addr) {
+        setFormData((prev) => ({ ...prev, address: addr }));
+      } else {
+        setGeoError("Address not found for this point.");
+      }
+    } catch {
+      if (reqId !== requestIdRef.current) return;
+      setGeoError(
+        "Reverse geocoding failed. You can still type address manually.",
+      );
+    } finally {
+      if (reqId === requestIdRef.current) setIsResolvingAddress(false);
+    }
+  };
+
+  const handleMapPick = async (lat: number, lng: number) => {
+    const fixedLat = Number(lat.toFixed(6));
+    const fixedLng = Number(lng.toFixed(6));
+    setFormData((prev) => ({
+      ...prev,
+      latitude: fixedLat,
+      longitude: fixedLng,
+    }));
+    await resolveAndFillAddress(fixedLat, fixedLng);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -313,7 +466,7 @@ const LocationFormModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-      <div className="bg-gray-900 border border-white/10 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-gray-900 border border-white/10 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-white/10 sticky top-0 bg-gray-900 z-10">
           <h3 className="text-xl font-semibold text-white">
             {location ? "Edit Location" : "Add Location"}
@@ -366,6 +519,50 @@ const LocationFormModal = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
+              Pick on map (click map or drag marker)
+            </label>
+            <MapContainer
+              center={markerPosition}
+              zoom={12}
+              scrollWheelZoom
+              style={{ height: 280, width: "100%", borderRadius: "0.75rem" }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <RecenterMap center={markerPosition} />
+              <PickOnMap onPick={handleMapPick} />
+              <Marker
+                position={markerPosition}
+                draggable
+                eventHandlers={{
+                  dragend: (e) => {
+                    const marker = e.target as L.Marker;
+                    const pos = marker.getLatLng();
+                    void handleMapPick(pos.lat, pos.lng);
+                  },
+                }}
+              />
+            </MapContainer>
+            <div className="mt-2 flex items-center gap-2 text-xs">
+              {isResolvingAddress ? (
+                <span className="text-blue-300 flex items-center gap-1">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Resolving address...
+                </span>
+              ) : geoError ? (
+                <span className="text-yellow-300">{geoError}</span>
+              ) : (
+                <span className="text-gray-400">
+                  Address auto-fills from selected point.
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Address
             </label>
             <textarea
@@ -376,7 +573,7 @@ const LocationFormModal = ({
               required
               rows={3}
               className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
-              placeholder="e.g., 123 Main Street, City, Country"
+              placeholder="Will auto-fill from map click, or type manually"
             />
           </div>
 
@@ -436,7 +633,7 @@ const LocationFormModal = ({
             </button>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isResolvingAddress}
               className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg font-medium hover:from-blue-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {isLoading ? "Saving..." : location ? "Update" : "Create"}
@@ -448,7 +645,6 @@ const LocationFormModal = ({
   );
 };
 
-// Delete Confirmation Modal
 interface DeleteConfirmModalProps {
   location: Location;
   onClose: () => void;

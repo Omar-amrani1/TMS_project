@@ -6,6 +6,8 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "sonner";
 import "./index.css";
+import "leaflet/dist/leaflet.css";
+
 import App from "./App.tsx";
 
 const queryClient = new QueryClient({
@@ -32,5 +34,5 @@ createRoot(document.getElementById("root")!).render(
       </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
-  </StrictMode>
+  </StrictMode>,
 );

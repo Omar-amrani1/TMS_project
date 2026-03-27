@@ -38,7 +38,8 @@ export const StockManagementPage = () => {
   const canAccessFinished =
     user?.role === "MANAGER" ||
     user?.role === "PRODUCTION_CLIENT" ||
-    user?.role === "DISTRIBUTOR";
+    user?.role === "DISTRIBUTOR" ||
+    user?.role === "FINISHED_STOCK_MANAGER";
 
   // Set initial tab based on user role
   useState(() => {
@@ -130,7 +131,7 @@ export const StockManagementPage = () => {
         <ProductionStockTab searchTerm={searchTerm} />
       )}
       {activeTab === "FINISHED_PRODUCT" && canAccessFinished && (
-        <FinishedProductStockTab searchTerm={searchTerm} />
+        <FinishedProductStockTab searchTerm={searchTerm} userLocationId={user?.locationId} />
       )}
     </div>
   );
@@ -291,15 +292,16 @@ const ProductionStockTab = ({ searchTerm }: { searchTerm: string }) => {
 };
 
 // Finished Product Stock Tab
-const FinishedProductStockTab = ({ searchTerm }: { searchTerm: string }) => {
-  const { stock, isLoading, isError, refetch } = useFinishedProductStock();
+const FinishedProductStockTab = ({ searchTerm, userLocationId }: { searchTerm: string; userLocationId?: string }) => {
+  const { stock, isLoading, isError, refetch } = useFinishedProductStock(
+    userLocationId ? { locationId: userLocationId } : undefined
+  );
   const [editingStock, setEditingStock] = useState<any>(null);
 
   const filteredStock = stock?.filter(
     (item) =>
       item.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.location.name.toLowerCase().includes(searchTerm.toLowerCase())
+      item.product.sku.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalQuantity =

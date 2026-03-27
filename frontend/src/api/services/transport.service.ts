@@ -1,4 +1,3 @@
-// src/api/services/transport.service.ts
 import { apiClient } from "../client";
 import { endpoints } from "../endpoints";
 import type {
@@ -12,6 +11,10 @@ import type {
   TransportJobStatus,
   ApiResponse,
 } from "../../types/api.types";
+
+const unwrapApi = <T>(response: any): T => {
+  return (response?.data?.data ?? response?.data) as T;
+};
 
 export const transportService = {
   // Providers
@@ -49,14 +52,14 @@ export const transportService = {
     if (params?.status) queryParams.append("status", params.status);
 
     const response = await apiClient.get<ApiResponse<{ vehicles: Vehicle[] }>>(
-      `${endpoints.transport.vehicles}?${queryParams}`
+      `${endpoints.transport.vehicles}?${queryParams}`,
     );
     return (response.data as any).data.vehicles;
   },
 
   getVehicleById: async (id: string): Promise<Vehicle> => {
     const response = await apiClient.get<ApiResponse<{ vehicle: Vehicle }>>(
-      endpoints.transport.vehicleById(id)
+      endpoints.transport.vehicleById(id),
     );
     return (response.data as any).data.vehicle;
   },
@@ -64,18 +67,18 @@ export const transportService = {
   createVehicle: async (data: CreateVehicleRequest): Promise<Vehicle> => {
     const response = await apiClient.post<ApiResponse<{ vehicle: Vehicle }>>(
       endpoints.transport.vehicles,
-      data
+      data,
     );
     return (response.data as any).data.vehicle;
   },
 
   updateVehicle: async (
     id: string,
-    data: Partial<CreateVehicleRequest>
+    data: Partial<CreateVehicleRequest>,
   ): Promise<Vehicle> => {
     const response = await apiClient.put<ApiResponse<{ vehicle: Vehicle }>>(
       endpoints.transport.vehicleById(id),
-      data
+      data,
     );
     return (response.data as any).data.vehicle;
   },
@@ -90,38 +93,38 @@ export const transportService = {
     if (params?.status) queryParams.append("status", params.status);
 
     const response = await apiClient.get<ApiResponse<{ jobs: TransportJob[] }>>(
-      `${endpoints.transport.jobs}?${queryParams}`
+      `${endpoints.transport.jobs}?${queryParams}`,
     );
     return (response.data as any).data.jobs;
   },
 
   getJobById: async (id: string): Promise<TransportJob> => {
     const response = await apiClient.get<ApiResponse<{ job: TransportJob }>>(
-      endpoints.transport.jobById(id)
+      endpoints.transport.jobById(id),
     );
     return (response.data as any).data.job;
   },
 
   updateJobStatus: async (
     id: string,
-    status: TransportJobStatus
+    status: TransportJobStatus,
   ): Promise<TransportJob> => {
     const response = await apiClient.put<ApiResponse<{ job: TransportJob }>>(
       endpoints.transport.updateJobStatus(id),
-      { status }
+      { status },
     );
     return (response.data as any).data.job;
   },
 
   // Calculate transport cost
   calculateCost: async (
-    data: CalculateTransportCostRequest
+    data: CalculateTransportCostRequest,
   ): Promise<TransportCostResponse> => {
     const response = await apiClient.post<ApiResponse<TransportCostResponse>>(
       endpoints.transport.calculateCost,
-      data
+      data,
     );
-    return (response.data as any).data;
+    return unwrapApi<TransportCostResponse>(response);
   },
 
   // Get active transport providers
@@ -132,16 +135,16 @@ export const transportService = {
     return (response.data as any).data.providers || [];
   },
 
-  // Calculate transport cost with weight and distance
+  // FIX: do NOT use `this` inside arrow fn
   calculateTransportCost: async (
     providerId: string,
     totalWeight: number,
-    distanceKm: number
+    distanceKm: number,
   ): Promise<TransportCostResponse> => {
-    return this.calculateCost({
-      providerId,
-      totalWeight,
-      distanceKm,
-    });
+    const response = await apiClient.post<ApiResponse<TransportCostResponse>>(
+      endpoints.transport.calculateCost,
+      { providerId, totalWeight, distanceKm },
+    );
+    return unwrapApi<TransportCostResponse>(response);
   },
 };

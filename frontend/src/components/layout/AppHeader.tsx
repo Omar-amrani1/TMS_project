@@ -1,20 +1,15 @@
 import { useLocation } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
-import { useCartStore } from "../../store/cartStore";
 import PillNav from "../ui/PillNav";
 import { UserDropdown } from "./UserDropdown";
 
 export const AppHeader = () => {
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
-  const { items } = useCartStore();
-
-  const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const navItems = [
     { label: "Home", href: "/" },
     { label: "Products", href: "/products" },
-    { label: "Cart", href: "/cart", badge: cartCount },
   ];
 
   return (

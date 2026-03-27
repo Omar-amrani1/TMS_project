@@ -1,15 +1,11 @@
-import prisma from '../../config/prisma';
+import prisma from "../../config/prisma";
 
 export class ReportService {
   /**
    * Get comprehensive dashboard statistics
    */
   async getDashboardStats() {
-    const [
-      orderStats,
-      stockStats,
-      transportStats,
-    ] = await Promise.all([
+    const [orderStats, stockStats, transportStats] = await Promise.all([
       this.getOrderStats(),
       this.getStockStats(),
       this.getTransportStats(),
@@ -25,7 +21,11 @@ export class ReportService {
   private async getOrderStats() {
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const previousMonthStart = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      1,
+    );
     const previousMonthEnd = new Date(currentMonthStart);
 
     const [
@@ -39,11 +39,11 @@ export class ReportService {
     ] = await Promise.all([
       prisma.order.count(),
       prisma.order.groupBy({
-        by: ['status'],
+        by: ["status"],
         _count: true,
       }),
       prisma.order.groupBy({
-        by: ['type'],
+        by: ["type"],
         _count: true,
       }),
       // Current month cost (from 1st of current month to today)
@@ -108,12 +108,8 @@ export class ReportService {
 
     return {
       total,
-      byStatus: Object.fromEntries(
-        byStatus.map((s) => [s.status, s._count])
-      ),
-      byType: Object.fromEntries(
-        byType.map((t) => [t.type, t._count])
-      ),
+      byStatus: Object.fromEntries(byStatus.map((s) => [s.status, s._count])),
+      byType: Object.fromEntries(byType.map((t) => [t.type, t._count])),
       costLastMonth: currentCost,
       costComparison: {
         current: currentCost,
@@ -158,7 +154,8 @@ export class ReportService {
         total: rawMaterial._sum.quantity || 0,
         reserved: rawMaterial._sum.reservedQty || 0,
         available:
-          (rawMaterial._sum.quantity || 0) - (rawMaterial._sum.reservedQty || 0),
+          (rawMaterial._sum.quantity || 0) -
+          (rawMaterial._sum.reservedQty || 0),
         items: rawMaterial._count,
       },
       production: {
@@ -180,23 +177,22 @@ export class ReportService {
   }
 
   private async getTransportStats() {
-    const [totalJobs, byStatus, totalVehicles, availableVehicles] = await Promise.all([
-      prisma.transportJob.count(),
-      prisma.transportJob.groupBy({
-        by: ['status'],
-        _count: true,
-      }),
-      prisma.vehicle.count(),
-      prisma.vehicle.count({
-        where: { status: 'AVAILABLE' },
-      }),
-    ]);
+    const [totalJobs, byStatus, totalVehicles, availableVehicles] =
+      await Promise.all([
+        prisma.transportJob.count(),
+        prisma.transportJob.groupBy({
+          by: ["status"],
+          _count: true,
+        }),
+        prisma.vehicle.count(),
+        prisma.vehicle.count({
+          where: { status: "AVAILABLE" },
+        }),
+      ]);
 
     return {
       totalJobs,
-      byStatus: Object.fromEntries(
-        byStatus.map((s) => [s.status, s._count])
-      ),
+      byStatus: Object.fromEntries(byStatus.map((s) => [s.status, s._count])),
       totalVehicles,
       availableVehicles,
     };
@@ -232,7 +228,7 @@ export class ReportService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.order.aggregate({
         where,
@@ -257,23 +253,19 @@ export class ReportService {
     };
   }
 
-  
   /**
    * Get stock movement report
    */
   async getStockMovementReport(locationId?: string) {
     const where: any = {};
     if (locationId) {
-      where.OR = [
-        { fromLocationId: locationId },
-        { toLocationId: locationId },
-      ];
+      where.OR = [{ fromLocationId: locationId }, { toLocationId: locationId }];
     }
 
     const orders = await prisma.order.findMany({
       where: {
         ...where,
-        status: 'DELIVERED',
+        status: "DELIVERED",
       },
       include: {
         items: {
@@ -294,10 +286,94 @@ export class ReportService {
           },
         },
       },
-      orderBy: { deliveryDate: 'desc' },
+      orderBy: { deliveryDate: "desc" },
       take: 100,
     });
 
     return orders;
+  }
+
+  async getTransportJobAnalytics(
+    startDate?: Date,
+    endDate?: Date,
+    providerId?: string,
+  ) {
+    const orderWhere: any = {
+      transportJob: { isNot: null }, // Only orders with transport jobs
+    };
+
+    if (startDate || endDate) {
+      orderWhere.createdAt = {};
+      if (startDate) orderWhere.createdAt.gte = startDate;
+      if (endDate) orderWhere.createdAt.lte = endDate;
+    }
+
+    let orders = await prisma.order.findMany({
+      where: orderWhere,
+      include: {
+        createdBy: {
+          select: { id: true, firstName: true, lastName: true, role: true },
+        },
+        confirmingUser: {
+          select: { id: true, firstName: true, lastName: true, role: true },
+        },
+        transportJob: {
+          include: {
+            provider: {
+              select: { id: true, name: true, userId: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Filter by provider ID in memory if specified
+    if (providerId) {
+      orders = orders.filter((o) => o.transportJob?.provider?.id === providerId);
+    }
+
+    const totalJobs = orders.length;
+    const totalCost = orders.reduce(
+      (sum, o) => sum + Number(o.transportTotal || 0),
+      0,
+    );
+
+    const rated = orders.filter((o) => o.ratedAt);
+    const ratedCount = rated.length;
+    const onTimeTrue = rated.filter((o) => o.ratingOnTime === true).length;
+    const damageFreeTrue = rated.filter(
+      (o) => o.ratingDamageFree === true,
+    ).length;
+
+    const onTimePercentage =
+      ratedCount === 0 ? 0 : (onTimeTrue / ratedCount) * 100;
+    const damageFreePercentage =
+      ratedCount === 0 ? 0 : (damageFreeTrue / ratedCount) * 100;
+
+    return {
+      summary: {
+        totalJobs,
+        ratedJobs: ratedCount,
+        totalCost,
+        onTimePercentage: Math.round(onTimePercentage * 10) / 10,
+        damageFreePercentage: Math.round(damageFreePercentage * 10) / 10,
+      },
+      records: orders.map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        type: o.type,
+        status: o.status,
+        transportTotal: o.transportTotal,
+        createdAt: o.createdAt,
+        deliveryDate: o.deliveryDate,
+        ratingOnTime: o.ratingOnTime,
+        ratingDamageFree: o.ratingDamageFree,
+        ratedAt: o.ratedAt,
+        provider: o.transportJob?.provider || null,
+        createdBy: o.createdBy,
+        confirmingUser: o.confirmingUser || null,
+      })),
+    };
   }
 }

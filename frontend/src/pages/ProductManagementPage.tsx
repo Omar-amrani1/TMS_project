@@ -24,7 +24,7 @@ export const ProductManagementPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(
-    null
+    null,
   );
 
   // Fetch products
@@ -100,7 +100,7 @@ export const ProductManagementPage = () => {
   const handleDelete = (productId: string) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this product? This action cannot be undone."
+        "Are you sure you want to delete this product? This action cannot be undone.",
       )
     ) {
       setDeletingProductId(productId);
@@ -259,9 +259,7 @@ export const ProductManagementPage = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Weight
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Price
-                  </th>
+
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
@@ -296,7 +294,7 @@ export const ProductManagementPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getTypeColor(
-                          product.type
+                          product.type,
                         )}`}
                       >
                         {getTypeLabel(product.type)}

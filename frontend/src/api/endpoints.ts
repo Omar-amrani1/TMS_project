@@ -6,7 +6,7 @@ export const endpoints = {
     login: "/auth/login",
     profile: "/auth/profile",
     changePassword: "/auth/change-password",
-    verifyToken: "/auth/verify-token",
+    verifyToken: "/auth/verify",
   },
 
   // Users
@@ -37,6 +37,7 @@ export const endpoints = {
     orders: "/reports/orders",
     production: "/reports/production",
     stockMovements: "/reports/stock-movements",
+    transportJobs: "/reports/transport-jobs",
   },
 
   // Stock
@@ -45,7 +46,8 @@ export const endpoints = {
     production: "/stock/production",
     finishedProduct: "/stock/finished-product",
     overview: "/stock/overview",
-    availableProducts: (locationId: string) => `/stock/location/${locationId}/available-products`,
+    availableProducts: (locationId: string) =>
+      `/stock/location/${locationId}/available-products`,
     updateRawMaterial: (productId: string, locationId: string) =>
       `/stock/raw-material/${productId}/${locationId}`,
     updateProduction: (productId: string, locationId: string) =>
@@ -60,6 +62,9 @@ export const endpoints = {
     byId: (id: string) => `/orders/${id}`,
     updateStatus: (id: string) => `/orders/${id}/status`,
     cancel: (id: string) => `/orders/${id}/cancel`,
+    notificationsMy: "/orders/notifications/my",
+    accept: (id: string) => `/orders/${id}/accept`,
+    rate: (id: string) => `/orders/${id}/rate`,
   },
 
   // Transport

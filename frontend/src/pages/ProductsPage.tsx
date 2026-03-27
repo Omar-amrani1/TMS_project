@@ -22,14 +22,14 @@ export const ProductsPage = () => {
     clearAuth();
   };
 
-  const handleAddToCart = (product: any) => {
-    if (!isAuthenticated) {
-      toast.error("Please sign in to add items to cart");
-      return;
-    }
-    addItem(product, 1);
-    toast.success(`${product.name} added to cart!`);
-  };
+  // const handleAddToCart = (product: any) => {
+  //   if (!isAuthenticated) {
+  //     toast.error("Please sign in to add items to cart");
+  //     return;
+  //   }
+  //   addItem(product, 1);
+  //   toast.success(`${product.name} added to cart!`);
+  // };
 
   // Filter products based on search and type
   const filteredProducts = products?.filter((product) => {
@@ -52,9 +52,8 @@ export const ProductsPage = () => {
         ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
         : "bg-green-500/20 text-green-400 border border-green-500/30",
     sku: product.sku,
-    price: 0,
     unit: "unit",
-    onAddToCart: () => handleAddToCart(product), // Pass the whole product
+    // no price field => FocusCards will not render price block
   }));
 
   return (

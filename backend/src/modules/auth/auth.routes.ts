@@ -1,51 +1,99 @@
-import { Router } from 'express';
-import { body } from 'express-validator';
-import { login, verifyToken, changePassword, getProfile } from './auth.controller';
-import { validate } from '../../shared/middleware/validator';
-import { authenticate, authorize } from '../../shared/middleware/auth';
-import { createUser } from './auth.controller';
-import { ROLES } from '../../config/constants';
+import { Router } from "express";
+import { body } from "express-validator";
+import {
+  login,
+  verifyToken,
+  changePassword,
+  getProfile,
+  updateProfile,
+  createUser,
+} from "./auth.controller";
+import { validate } from "../../shared/middleware/validator";
+import { authenticate, authorize } from "../../shared/middleware/auth";
+import { ROLES } from "../../config/constants";
+
 const router = Router();
 
-
 router.post(
-  '/login',
+  "/login",
   [
-    body('email').isEmail().withMessage('Valid email is required'),
-    body('password').notEmpty().withMessage('Password is required'),
+    body("email").isEmail().withMessage("Valid email is required"),
+    body("password").notEmpty().withMessage("Password is required"),
     validate,
   ],
-  login
+  login,
 );
 
-router.get('/verify', verifyToken);
+router.get("/verify", verifyToken);
 
-router.get('/profile', authenticate, getProfile);
+router.get("/profile", authenticate, getProfile);
 
-router.post(
-  '/change-password',
+router.put(
+  "/profile",
   authenticate,
   [
-    body('currentPassword').notEmpty().withMessage('Current password is required'),
-    body('newPassword')
-      .isLength({ min: 6 })
-      .withMessage('New password must be at least 6 characters'),
+    body("firstName")
+      .optional()
+      .isString()
+      .withMessage("First name must be a string")
+      .trim()
+      .notEmpty()
+      .withMessage("First name cannot be empty"),
+    body("lastName")
+      .optional()
+      .isString()
+      .withMessage("Last name must be a string")
+      .trim()
+      .notEmpty()
+      .withMessage("Last name cannot be empty"),
+    body("email")
+      .optional()
+      .isEmail()
+      .withMessage("Valid email is required")
+      .normalizeEmail(),
     validate,
   ],
-  changePassword
+  updateProfile,
 );
+
 router.post(
-  '/users',
+  "/change-password",
+  authenticate,
+  [
+    body("currentPassword")
+      .notEmpty()
+      .withMessage("Current password is required"),
+    body("newPassword")
+      .isLength({ min: 6 })
+      .withMessage("New password must be at least 6 characters"),
+    validate,
+  ],
+  changePassword,
+);
+
+router.post(
+  "/users",
+  authenticate,
   authorize(ROLES.MANAGER),
   [
-    body('email').isEmail().withMessage('Valid email is required'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('firstName').notEmpty().withMessage('First name is required'),
-    body('lastName').notEmpty().withMessage('Last name is required'),
-    body('role').isIn(['RAW_STOCK_MANAGER', 'PRODUCTION_CLIENT', 'DISTRIBUTOR', 'TRANSPORT_PROVIDER']).withMessage('Invalid role'),
+    body("email").isEmail().withMessage("Valid email is required"),
+    body("password")
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters"),
+    body("firstName").notEmpty().withMessage("First name is required"),
+    body("lastName").notEmpty().withMessage("Last name is required"),
+    body("role")
+      .isIn([
+        "RAW_STOCK_MANAGER",
+        "PRODUCTION_CLIENT",
+        "DISTRIBUTOR",
+        "TRANSPORT_PROVIDER",
+        "FINISHED_STOCK_MANAGER",
+      ])
+      .withMessage("Invalid role"),
     validate,
   ],
-  createUser
+  createUser,
 );
 
 export default router;

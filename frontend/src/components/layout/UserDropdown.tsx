@@ -109,15 +109,6 @@ export const UserDropdown = () => {
             </Link>
 
             <Link
-              to="/cart"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-2 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-            >
-              <ShoppingCart className="w-4 h-4" />
-              <span className="text-sm">Shopping Cart</span>
-            </Link>
-
-            <Link
               to="/dashboard"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-4 py-2 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"

@@ -13,31 +13,34 @@ datasource db {
 // ==================== USER & AUTH ====================
 
 enum UserRole {
-  MANAGER              // Full visibility, no operational interference
-  RAW_STOCK_MANAGER    // Manages raw material stock
-  PRODUCTION_CLIENT    // Orders raw materials, runs production
-  DISTRIBUTOR          // Orders finished products
-  TRANSPORT_PROVIDER   // Manages transport operations
+  MANAGER                // Full visibility, no operational interference
+  RAW_STOCK_MANAGER      // Manages raw material stock
+  PRODUCTION_CLIENT      // Orders raw materials, runs production
+  DISTRIBUTOR            // Orders finished products
+  TRANSPORT_PROVIDER     // Manages transport operations
+  FINISHED_STOCK_MANAGER // Manages finished stock and deliveries to distribution
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  password     String
-  firstName    String
-  lastName    String
-  role         UserRole
-  locationId   String?  // NULL for MANAGER and TRANSPORT_PROVIDER roles (they don't have a location)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String
+  firstName  String
+  lastName   String
+  role       UserRole
+  locationId String?  // NULL for MANAGER and TRANSPORT_PROVIDER roles (they don't have a location)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relations
-  location            Location?            @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  ordersCreated       Order[]              @relation("OrderCreator")
-  ordersConfirming    Order[]              @relation("OrderConfirmer")
-  productionBatches   ProductionBatch[]
-  transportProvider   TransportProvider?
+  location          Location?          @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  ordersCreated     Order[]            @relation("OrderCreator")
+  ordersConfirming  Order[]            @relation("OrderConfirmer")
+  ordersDestination Order[]            @relation("OrderDestinationUser")
+  ordersRated       Order[]            @relation("OrderRater")
+  productionBatches ProductionBatch[]
+  transportProvider TransportProvider?
 
   @@index([email])
   @@index([role])
@@ -48,24 +51,24 @@ model User {
 // ==================== LOCATION ====================
 
 model Location {
-  id          String   @id @default(uuid())
-  name        String
-  address     String
-  latitude    Float
-  longitude   Float
-  locationType String  // RAW_WAREHOUSE, PRODUCTION_FACILITY, DISTRIBUTION_CENTER, etc.
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(uuid())
+  name         String
+  address      String   @db.Text
+  latitude     Float
+  longitude    Float
+  locationType String   // RAW_WAREHOUSE, PRODUCTION_FACILITY, DISTRIBUTION_CENTER, etc.
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  users                   User[]                  @relation()
-  rawStockItems           RawMaterialStock[]
-  productionStockItems    ProductionStock[]
-  finishedStockItems      FinishedProductStock[]
-  ordersFrom              Order[]                 @relation("OrderFromLocation")
-  ordersTo                Order[]                 @relation("OrderToLocation")
-  transportJobsFrom       TransportJob[]          @relation("TransportFromLocation")
-  transportJobsTo         TransportJob[]          @relation("TransportToLocation")
+  users                User[]            @relation()
+  rawStockItems        RawMaterialStock[]
+  productionStockItems ProductionStock[]
+  finishedStockItems   FinishedProductStock[]
+  ordersFrom           Order[]           @relation("OrderFromLocation")
+  ordersTo             Order[]           @relation("OrderToLocation")
+  transportJobsFrom    TransportJob[]    @relation("TransportFromLocation")
+  transportJobsTo      TransportJob[]    @relation("TransportToLocation")
 
   @@index([locationType])
   @@map("locations")
@@ -79,25 +82,25 @@ enum ProductType {
 }
 
 model Product {
-  id              String      @id @default(uuid())
-  name            String
-  description     String?
-  sku             String      @unique
-  type            ProductType
-  unitWeight      Float       // in kg
-  isActive        Boolean     @default(true)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  sku         String      @unique
+  type        ProductType
+  unitWeight  Float       // in kg
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   // Relations
-  rawStockItems           RawMaterialStock[]
-  productionStockItems    ProductionStock[]
-  finishedStockItems      FinishedProductStock[]
-  orderItems              OrderItem[]
-  productionInputs        ProductionInput[]
-  productionOutputs       ProductionOutput[]
-  recipeInputs            RecipeInput[]
-  recipeOutputs           RecipeOutput[]
+  rawStockItems        RawMaterialStock[]
+  productionStockItems ProductionStock[]
+  finishedStockItems   FinishedProductStock[]
+  orderItems           OrderItem[]
+  productionInputs     ProductionInput[]
+  productionOutputs    ProductionOutput[]
+  recipeInputs         RecipeInput[]
+  recipeOutputs        RecipeOutput[]
 
   @@index([type])
   @@index([sku])
@@ -108,14 +111,14 @@ model Product {
 
 // Level 1: Raw Material Stock
 model RawMaterialStock {
-  id          String   @id @default(uuid())
-  productId   String
-  locationId  String
-  quantity    Float    @default(0)
-  reservedQty Float    @default(0) // Reserved for pending orders
-  availableQty Float   @default(0) // quantity - reservedQty (computed)
-  lastUpdated DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid())
+  productId    String
+  locationId   String
+  quantity     Float    @default(0)
+  reservedQty  Float    @default(0) // Reserved for pending orders
+  availableQty Float    @default(0) // quantity - reservedQty (computed)
+  lastUpdated  DateTime @updatedAt
+  createdAt    DateTime @default(now())
 
   // Relations
   product  Product  @relation(fields: [productId], references: [id])
@@ -128,14 +131,14 @@ model RawMaterialStock {
 
 // Level 2: Production Stock
 model ProductionStock {
-  id          String   @id @default(uuid())
-  productId   String
-  locationId  String
-  quantity    Float    @default(0)
-  reservedQty Float    @default(0)
-  availableQty Float   @default(0)
-  lastUpdated DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid())
+  productId    String
+  locationId   String
+  quantity     Float    @default(0)
+  reservedQty  Float    @default(0)
+  availableQty Float    @default(0)
+  lastUpdated  DateTime @updatedAt
+  createdAt    DateTime @default(now())
 
   // Relations
   product  Product  @relation(fields: [productId], references: [id])
@@ -148,14 +151,14 @@ model ProductionStock {
 
 // Level 3: Finished Product Stock
 model FinishedProductStock {
-  id          String   @id @default(uuid())
-  productId   String
-  locationId  String
-  quantity    Float    @default(0)
-  reservedQty Float    @default(0)
-  availableQty Float   @default(0)
-  lastUpdated DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid())
+  productId    String
+  locationId   String
+  quantity     Float    @default(0)
+  reservedQty  Float    @default(0)
+  availableQty Float    @default(0)
+  lastUpdated  DateTime @updatedAt
+  createdAt    DateTime @default(now())
 
   // Relations
   product  Product  @relation(fields: [productId], references: [id])
@@ -169,8 +172,9 @@ model FinishedProductStock {
 // ==================== ORDERS ====================
 
 enum OrderType {
-  RAW_MATERIAL_ORDER      // Production client orders raw materials
-  FINISHED_PRODUCT_ORDER  // Distributor orders finished products
+  RAW_MATERIAL_ORDER     // Production client orders raw materials
+  FINISHED_PRODUCT_ORDER // Distributor orders finished products
+  DELIVERY               // Internal delivery transfer
 }
 
 enum OrderStatus {
@@ -188,42 +192,53 @@ model Order {
   type              OrderType
   status            OrderStatus @default(PENDING)
   createdById       String
-  confirmingUserId  String?     // User at fromLocation responsible for confirming order
+  confirmingUserId  String? // User at fromLocation responsible for confirming order
+  destinationUserId String? // Receiver user (used for DELIVERY)
+  ratedByUserId     String? // User who submitted rating (one-time)
   fromLocationId    String
   toLocationId      String
-  
+
   // Transport Cost Only
-  transportTotal    Float       @default(0)  // Transport cost only
-  
-  distanceKm        Float
-  
-  orderDate         DateTime    @default(now())
-  deliveryDate      DateTime?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  transportTotal Float @default(0) // Transport cost only
+  distanceKm     Float
+
+  // Rating
+  ratingOnTime     Boolean?
+  ratingDamageFree Boolean?
+  ratedAt          DateTime?
+
+  orderDate   DateTime @default(now())
+  deliveryDate DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
-  createdBy      User          @relation("OrderCreator", fields: [createdById], references: [id])
-  confirmingUser User?         @relation("OrderConfirmer", fields: [confirmingUserId], references: [id], onDelete: SetNull)
-  fromLocation   Location      @relation("OrderFromLocation", fields: [fromLocationId], references: [id])
-  toLocation     Location      @relation("OrderToLocation", fields: [toLocationId], references: [id])
-  items          OrderItem[]
-  transportJob   TransportJob?
+  createdBy       User         @relation("OrderCreator", fields: [createdById], references: [id])
+  confirmingUser  User?        @relation("OrderConfirmer", fields: [confirmingUserId], references: [id], onDelete: SetNull)
+  destinationUser User?        @relation("OrderDestinationUser", fields: [destinationUserId], references: [id], onDelete: SetNull)
+  ratedByUser     User?        @relation("OrderRater", fields: [ratedByUserId], references: [id], onDelete: SetNull)
+  fromLocation    Location     @relation("OrderFromLocation", fields: [fromLocationId], references: [id])
+  toLocation      Location     @relation("OrderToLocation", fields: [toLocationId], references: [id])
+  items           OrderItem[]
+  transportJob    TransportJob?
 
   @@index([orderNumber])
   @@index([status])
   @@index([type])
   @@index([createdById])
   @@index([confirmingUserId])
+  @@index([destinationUserId])
+  @@index([ratedByUserId])
+  @@index([ratedAt])
   @@map("orders")
 }
 
 model OrderItem {
-  id          String   @id @default(uuid())
-  orderId     String
-  productId   String
-  quantity    Float
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Float
+  createdAt DateTime @default(now())
 
   // Relations
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -238,12 +253,12 @@ model OrderItem {
 // ==================== TRANSPORT ====================
 
 model TransportProvider {
-  id          String   @id @default(uuid())
-  name        String
-  userId      String   @unique
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  name      String
+  userId    String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   user     User      @relation(fields: [userId], references: [id])
@@ -261,15 +276,15 @@ enum VehicleStatus {
 }
 
 model Vehicle {
-  id                String        @id @default(uuid())
-  providerId        String
-  name              String
-  licensePlate      String        @unique
-  capacityKg        Float
-  costPerKm         Float
-  status            VehicleStatus @default(AVAILABLE)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  id           String        @id @default(uuid())
+  providerId   String
+  name         String
+  licensePlate String        @unique
+  capacityKg   Float
+  costPerKm    Float
+  status       VehicleStatus @default(AVAILABLE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   // Relations
   provider    TransportProvider @relation(fields: [providerId], references: [id])
@@ -288,25 +303,25 @@ enum TransportJobStatus {
 }
 
 model TransportJob {
-  id              String              @id @default(uuid())
-  orderId         String              @unique
-  providerId      String
-  fromLocationId  String
-  toLocationId    String
-  distanceKm      Float
-  totalWeight     Float
-  totalCost       Float
-  status          TransportJobStatus  @default(SCHEDULED)
-  scheduledDate   DateTime
-  completedDate   DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id             String             @id @default(uuid())
+  orderId        String             @unique
+  providerId     String
+  fromLocationId String
+  toLocationId   String
+  distanceKm     Float
+  totalWeight    Float
+  totalCost      Float
+  status         TransportJobStatus @default(SCHEDULED)
+  scheduledDate  DateTime
+  completedDate  DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   // Relations
-  order        Order               @relation(fields: [orderId], references: [id])
-  provider     TransportProvider   @relation(fields: [providerId], references: [id])
-  fromLocation Location            @relation("TransportFromLocation", fields: [fromLocationId], references: [id])
-  toLocation   Location            @relation("TransportToLocation", fields: [toLocationId], references: [id])
+  order        Order             @relation(fields: [orderId], references: [id])
+  provider     TransportProvider @relation(fields: [providerId], references: [id])
+  fromLocation Location          @relation("TransportFromLocation", fields: [fromLocationId], references: [id])
+  toLocation   Location          @relation("TransportToLocation", fields: [toLocationId], references: [id])
   allocations  VehicleAllocation[]
 
   @@index([orderId])
@@ -316,11 +331,11 @@ model TransportJob {
 }
 
 model VehicleAllocation {
-  id          String   @id @default(uuid())
-  jobId       String
-  vehicleId   String
-  cost        Float    // vehicle costPerKm * distance
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  jobId     String
+  vehicleId String
+  cost      Float    // vehicle costPerKm * distance
+  createdAt DateTime @default(now())
 
   // Relations
   job     TransportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
@@ -350,11 +365,11 @@ model Recipe {
 }
 
 model RecipeInput {
-  id         String   @id @default(uuid())
-  recipeId   String
-  productId  String
-  quantity   Float    // Required quantity of raw material
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  recipeId  String
+  productId String
+  quantity  Float    // Required quantity of raw material
+  createdAt DateTime @default(now())
 
   // Relations
   recipe  Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
@@ -365,11 +380,11 @@ model RecipeInput {
 }
 
 model RecipeOutput {
-  id         String   @id @default(uuid())
-  recipeId   String
-  productId  String
-  quantity   Float    // Expected output quantity
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  recipeId  String
+  productId String
+  quantity  Float    // Expected output quantity
+  createdAt DateTime @default(now())
 
   // Relations
   recipe  Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
@@ -387,23 +402,23 @@ enum ProductionBatchStatus {
 }
 
 model ProductionBatch {
-  id              String                @id @default(uuid())
-  batchNumber     String                @unique
-  recipeId        String
-  producedById    String
-  locationId      String                // Production location
-  status          ProductionBatchStatus @default(PLANNED)
-  multiplier      Float                 @default(1) // Recipe multiplier
-  startedAt       DateTime?
-  completedAt     DateTime?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  id          String                @id @default(uuid())
+  batchNumber String                @unique
+  recipeId    String
+  producedById String
+  locationId  String                // Production location
+  status      ProductionBatchStatus @default(PLANNED)
+  multiplier  Float                 @default(1) // Recipe multiplier
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
 
   // Relations
-  recipe      Recipe             @relation(fields: [recipeId], references: [id])
-  producedBy  User               @relation(fields: [producedById], references: [id])
-  inputs      ProductionInput[]
-  outputs     ProductionOutput[]
+  recipe     Recipe             @relation(fields: [recipeId], references: [id])
+  producedBy User               @relation(fields: [producedById], references: [id])
+  inputs     ProductionInput[]
+  outputs    ProductionOutput[]
 
   @@index([batchNumber])
   @@index([status])
@@ -411,11 +426,11 @@ model ProductionBatch {
 }
 
 model ProductionInput {
-  id          String   @id @default(uuid())
-  batchId     String
-  productId   String
+  id           String   @id @default(uuid())
+  batchId      String
+  productId    String
   quantityUsed Float
-  createdAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   // Relations
   batch   ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
@@ -426,11 +441,11 @@ model ProductionInput {
 }
 
 model ProductionOutput {
-  id              String   @id @default(uuid())
-  batchId         String
-  productId       String
+  id               String   @id @default(uuid())
+  batchId          String
+  productId        String
   quantityProduced Float
-  createdAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
 
   // Relations
   batch   ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
@@ -439,5 +454,3 @@ model ProductionOutput {
   @@index([batchId])
   @@map("production_outputs")
 }
-
-

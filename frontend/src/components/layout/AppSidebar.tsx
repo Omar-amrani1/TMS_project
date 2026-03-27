@@ -23,6 +23,7 @@ import {
   Factory,
   LogOut,
   Users,
+  BarChart3,
 } from "lucide-react";
 
 export function AppSidebar() {
@@ -46,6 +47,7 @@ export function AppSidebar() {
         "PRODUCTION_CLIENT",
         "DISTRIBUTOR",
         "TRANSPORT_PROVIDER",
+        "FINISHED_STOCK_MANAGER",
       ],
     },
     {
@@ -64,7 +66,7 @@ export function AppSidebar() {
       label: "Stock",
       icon: Warehouse,
       path: "/stock",
-      roles: ["MANAGER", "RAW_STOCK_MANAGER", "PRODUCTION_CLIENT"],
+      roles: ["MANAGER", "RAW_STOCK_MANAGER", "PRODUCTION_CLIENT", "FINISHED_STOCK_MANAGER"],
     },
 
     {
@@ -85,10 +87,16 @@ export function AppSidebar() {
       path: "/users",
       roles: ["MANAGER"],
     },
+    {
+      label: "Job Analytics",
+      icon: BarChart3,
+      path: "/analytics",
+      roles: ["MANAGER"],
+    },
   ];
 
   const filteredNavItems = navItems.filter((item) =>
-    item.roles.includes(user?.role || "")
+    item.roles.includes(user?.role || ""),
   );
 
   return (

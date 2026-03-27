@@ -22,6 +22,7 @@ import { ordersService } from "../api/services/orders.service";
 import { OrderStatus } from "../types/api.types";
 import { format } from "date-fns";
 import { useOrders } from "../hooks/useOrders";
+import { RouteMap } from "../components/map";
 
 export const OrderDetailManagementPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -97,7 +98,7 @@ export const OrderDetailManagementPage = () => {
             setIsEditingStatus(false);
             refetch();
           },
-        }
+        },
       );
     } else {
       setIsEditingStatus(false);
@@ -108,7 +109,7 @@ export const OrderDetailManagementPage = () => {
     if (
       orderId &&
       window.confirm(
-        "Are you sure you want to cancel this order? This action cannot be undone."
+        "Are you sure you want to cancel this order? This action cannot be undone.",
       )
     ) {
       cancelOrder(orderId, {
@@ -177,8 +178,8 @@ export const OrderDetailManagementPage = () => {
                 order.status === OrderStatus.DELIVERED
                   ? "bg-gradient-to-br from-green-600 to-emerald-600"
                   : order.status === OrderStatus.CANCELLED
-                  ? "bg-gradient-to-br from-red-600 to-rose-600"
-                  : "bg-gradient-to-br from-blue-600 to-cyan-600"
+                    ? "bg-gradient-to-br from-red-600 to-rose-600"
+                    : "bg-gradient-to-br from-blue-600 to-cyan-600"
               } rounded-2xl flex items-center justify-center shadow-lg`}
             >
               {getStatusIcon(order.status)}
@@ -261,7 +262,7 @@ export const OrderDetailManagementPage = () => {
             <>
               <span
                 className={`px-4 py-2 rounded-full text-sm font-medium border flex items-center gap-2 ${getStatusColor(
-                  order.status
+                  order.status,
                 )}`}
               >
                 {getStatusIcon(order.status)}
@@ -384,6 +385,13 @@ export const OrderDetailManagementPage = () => {
                 </span>
               </div>
             </div>
+            <div className="mt-4">
+              <RouteMap
+                from={order.fromLocation as any}
+                to={order.toLocation as any}
+                height={280}
+              />
+            </div>
           </div>
 
           {/* Transport Details */}
@@ -407,8 +415,8 @@ export const OrderDetailManagementPage = () => {
                       order.transportJob.status === "COMPLETED"
                         ? "bg-green-500/20 text-green-400 border-green-500/30"
                         : order.transportJob.status === "IN_PROGRESS"
-                        ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
-                        : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                          ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                          : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
                     }`}
                   >
                     {order.transportJob.status}

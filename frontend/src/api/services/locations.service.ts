@@ -21,7 +21,7 @@ export const locationsService = {
   // Get location by ID
   getLocationById: async (id: string): Promise<Location> => {
     const response = await apiClient.get<ApiResponse<{ location: Location }>>(
-      endpoints.locations.byId(id)
+      endpoints.locations.byId(id),
     );
     return (response.data as any).data.location;
   },
@@ -30,7 +30,7 @@ export const locationsService = {
   createLocation: async (data: CreateLocationRequest): Promise<Location> => {
     const response = await apiClient.post<ApiResponse<{ location: Location }>>(
       endpoints.locations.base,
-      data
+      data,
     );
     return (response.data as any).data.location;
   },
@@ -38,11 +38,11 @@ export const locationsService = {
   // Update location
   updateLocation: async (
     id: string,
-    data: Partial<CreateLocationRequest>
+    data: Partial<CreateLocationRequest>,
   ): Promise<Location> => {
     const response = await apiClient.put<ApiResponse<{ location: Location }>>(
       endpoints.locations.byId(id),
-      data
+      data,
     );
     return (response.data as any).data.location;
   },
@@ -53,13 +53,24 @@ export const locationsService = {
   },
 
   // Calculate distance
-  calculateDistance: async (
-    fromLocationId: string,
-    toLocationId: string
-  ): Promise<DistanceCalculation> => {
-    const response = await apiClient.get<ApiResponse<DistanceCalculation>>(
-      `${endpoints.locations.calculateDistance}?fromLocationId=${fromLocationId}&toLocationId=${toLocationId}`
+  calculateDistance: async (fromLocationId: string, toLocationId: string) => {
+    const response = await apiClient.get(
+      endpoints.locations.calculateDistance,
+      {
+        params: { fromLocationId, toLocationId },
+      },
     );
-    return (response.data as any).data;
+
+    const payload = (response as any)?.data?.data ?? (response as any)?.data;
+
+    return {
+      distanceKm:
+        Number(
+          payload?.distanceKm ??
+            payload?.distance?.distanceKm ??
+            payload?.distance ??
+            0,
+        ) || 0,
+    };
   },
 };

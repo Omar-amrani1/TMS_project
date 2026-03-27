@@ -27,6 +27,8 @@ import type {
   TransportJobStatus,
   User as UserType,
 } from "../types/api.types";
+import { RouteMap } from "../components/map";
+
 import { apiClient } from "../api/client";
 
 type TabType = "jobs" | "vehicles" | "providers";
@@ -40,15 +42,14 @@ export const TransportManagementPage = () => {
     { id: "jobs" as TabType, label: "Transport Jobs", icon: Truck },
     { id: "vehicles" as TabType, label: "Vehicles", icon: Package },
     // Only managers can see providers
-    ...(user?.role === "MANAGER" 
+    ...(user?.role === "MANAGER"
       ? [{ id: "providers" as TabType, label: "Providers", icon: User }]
-      : []
-    ),
+      : []),
   ];
 
   // Reset to jobs tab if current tab is not allowed
   useEffect(() => {
-    const isTabAllowed = tabs.some(tab => tab.id === activeTab);
+    const isTabAllowed = tabs.some((tab) => tab.id === activeTab);
     if (!isTabAllowed && activeTab !== "jobs") {
       setActiveTab("jobs");
     }
@@ -93,7 +94,9 @@ export const TransportManagementPage = () => {
       <div className="mt-6">
         {activeTab === "jobs" && <TransportJobsTab />}
         {activeTab === "vehicles" && <VehiclesTab />}
-        {activeTab === "providers" && user?.role === "MANAGER" && <ProvidersTab />}
+        {activeTab === "providers" && user?.role === "MANAGER" && (
+          <ProvidersTab />
+        )}
       </div>
     </div>
   );
@@ -103,7 +106,7 @@ export const TransportManagementPage = () => {
 const TransportJobsTab = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<TransportJobStatus | "ALL">(
-    "ALL"
+    "ALL",
   );
   const [selectedJob, setSelectedJob] = useState<TransportJob | null>(null);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
@@ -418,7 +421,7 @@ const TransportJobsTab = () => {
 const VehiclesTab = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | "ALL">(
-    "ALL"
+    "ALL",
   );
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
@@ -707,7 +710,7 @@ const ProvidersTab = () => {
 
   const filteredProviders =
     providers?.filter((provider) =>
-      provider.name.toLowerCase().includes(searchQuery.toLowerCase())
+      provider.name.toLowerCase().includes(searchQuery.toLowerCase()),
     ) || [];
 
   if (isLoading) {
@@ -831,7 +834,7 @@ const UpdateJobStatusModal = ({
   isLoading,
 }: UpdateJobStatusModalProps) => {
   const [selectedStatus, setSelectedStatus] = useState<TransportJobStatus>(
-    job.status
+    job.status,
   );
 
   const availableStatuses: TransportJobStatus[] = [
@@ -858,6 +861,12 @@ const UpdateJobStatusModal = ({
 
         <div className="p-6 space-y-4">
           <div>
+            <p className="text-sm text-gray-400 mb-2">Route Preview</p>
+            <RouteMap
+              from={job.fromLocation as any}
+              to={job.toLocation as any}
+              height={240}
+            />
             <p className="text-sm text-gray-400 mb-2">Current Status</p>
             <p className="text-white font-medium">{job.status}</p>
           </div>
@@ -1116,19 +1125,19 @@ const ProviderFormModal = ({
       setLoadingUsers(true);
       try {
         const response = await apiClient.get("/users");
-        
+
         // Extract users from response - API returns { data: [...], meta: {...} }
         const allUsers: UserType[] = response.data?.data || [];
 
         // Get user IDs that already have providers
         const usersWithProviders = new Set(
-          existingProviders?.map((p) => p.userId) || []
+          existingProviders?.map((p) => p.userId) || [],
         );
 
         // Filter to only TRANSPORT_PROVIDER role users who don't already have a provider
         const availableTransportUsers = allUsers.filter(
           (u: UserType) =>
-            u.role === "TRANSPORT_PROVIDER" && !usersWithProviders.has(u.id)
+            u.role === "TRANSPORT_PROVIDER" && !usersWithProviders.has(u.id),
         );
 
         setUsers(availableTransportUsers);
@@ -1187,7 +1196,8 @@ const ProviderFormModal = ({
             ) : users.length === 0 ? (
               <div className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg">
                 <p className="text-yellow-400 text-sm">
-                  No available users to add a new provider. Please create a user with TRANSPORT_PROVIDER role.
+                  No available users to add a new provider. Please create a user
+                  with TRANSPORT_PROVIDER role.
                 </p>
               </div>
             ) : (
