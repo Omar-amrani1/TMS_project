@@ -23,7 +23,7 @@ A comprehensive production and logistics management platform with multi-level st
 ### Prerequisites
 
 - Node.js (v18 or higher)
-- PostgreSQL (v14 or higher)
+- Mysql (v14 or higher)
 - npm or yarn
 
 ### Installation
@@ -68,15 +68,13 @@ src/
 ├── config/                # Configuration files
 ├── modules/               # Feature modules
 │   ├── auth/             # Authentication
-│   ├── users/            # User management
-│   ├── products/         # Product catalog
-│   ├── stock/            # Stock management
-│   ├── orders/           # Order processing
-│   ├── production/       # Production tracking
-│   ├── transport/        # Transport management
 │   ├── locations/        # Location & distance calculation
-│   ├── payments/         # Payment processing
-│   └── reports/          # Reporting & analytics
+│   ├── orders/           # Order processing
+│   ├── products/         # Product catalog
+│   ├── reports/          # Reporting & analytics
+│   ├── stock/            # Stock management
+│   ├── transport/        # Transport management
+│   └── users/            # User management
 ├── shared/               # Shared utilities
 │   ├── middleware/       # Express middleware
 │   ├── errors/           # Error handling
@@ -93,12 +91,11 @@ The API follows RESTful conventions and is available at `/api/v1`.
 
 - `POST /api/v1/auth/login` - User authentication
 - `GET /api/v1/products` - List products
-- `POST /api/v1/orders` - Create order
+- `POST /api/v1/orders/create` - Create order
 - `GET /api/v1/stock/:type` - Get stock levels
 - `POST /api/v1/production/batches` - Create production batch
 - `GET /api/v1/transport/providers` - List transport providers
 
-## Business Logic
 
 ### Stock Levels
 
@@ -111,9 +108,8 @@ The API follows RESTful conventions and is available at `/api/v1`.
 1. Order placed by client (production or distributor)
 2. Transport provider selected
 3. Cost calculated (product + transport)
-4. Payment processed
-5. Stock allocated
-6. Transport scheduled
+4. Stock allocated
+5. Transport scheduled
 7. Delivery completed
 
 ### Transport Costing
